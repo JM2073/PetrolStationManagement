@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PSM.Main", "PSM.Main\PSM.Main.csproj", "{A2346C37-EA05-4B6D-B8D4-52E5794EB149}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PSMMain", "PSMMain\PSMMain.csproj", "{A2346C37-EA05-4B6D-B8D4-52E5794EB149}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
