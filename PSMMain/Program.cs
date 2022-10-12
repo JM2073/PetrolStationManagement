@@ -283,6 +283,10 @@ namespace PSMMain
         {
             var timer = (CustomTimer)sender!;
             var vehicle = _vehicles.Single(x => x.Id == timer.CarId);
+
+            if (vehicle.IsAtPump)
+                return;
+            
             _vehicles.Remove(vehicle);
             _vehicles = _vehicles.ToList();
             _lostCars++;
