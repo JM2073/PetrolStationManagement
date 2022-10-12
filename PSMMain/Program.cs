@@ -11,10 +11,13 @@ namespace PSMMain
 
     class Program
     {
+        private static CustomMethods.ConsoleSpinner _spinner = new();
+
         private static int _servedCars;
-        private static Timer _carSpawner = new(1500);
+        private static Timer _carSpawner = new(5000);
         private static List<Pump> _pumps = new();
         private static List<Vehicle> _vehicles = new();
+        private static bool CurrentlyDrawing = false;
 
         public static void Main(string[] args)
         {
@@ -23,13 +26,16 @@ namespace PSMMain
 
             while (onShift)
             {
+                DrawForecourt();
+
                 if (_vehicles.Any(x => x.IsAtPump == false))
                 {
-                    Console.SetCursorPosition(0, 14);
                     Console.WriteLine("you have cars in the queue, please select an available pump.");
 
                     var choice = CustomMethods.ParseStringToInt(Console.ReadLine(),
                         "please make sure you select a valid pump.");
+
+                    CurrentlyDrawing = false;
 
                     if (_pumps.Where(x => x.CurrentlyActive == false).Any(x => x.Id == choice))
                     {
@@ -37,36 +43,24 @@ namespace PSMMain
                     }
                     else
                     {
-                        
-                        Console.SetCursorPosition(0, 18);
                         Console.WriteLine("please make sure the pump is available.");
-                        Console.SetCursorPosition(0, 19);
                         Console.WriteLine("press any key to try again.");
-                        Console.SetCursorPosition(0, 20);
                         Console.ReadKey();
                     }
                 }
                 else
                 {
-                    // if there are no objects wait for objects. if there are objects but they are all busy wait till a free object
-                    if (_vehicles.Count == 0)
-                    {
-                        while (_vehicles.Count == 0)
-                        {
-                            //TODO placeholder, replace with something like a waiting bar
-                        }
-                    }
-                    else
-                    {
-                        while (_vehicles.Count(x => x.IsAtPump) == _vehicles.Count)
-                        {
-                            //TODO placeholder, replace with something like a waiting bar
-                        }
-                    }
+                    CurrentlyDrawing = false;
+
+                    _spinner.Delay = 300;
+                    while (_vehicles.ToList().Count(x => x.IsAtPump) == _vehicles.ToList().Count ||  _vehicles.Count == 0)
+                        _spinner.Turn(displayMsg: "Please Wait for the next car ", sequenceCode: 5);
                 }
-                Console.SetCursorPosition(0, 15);
-                CustomMethods.ClearCurrentConsoleLine();
             }
+
+            _carSpawner.Close();
+            Console.WriteLine("well done, you have done a hard days work.");
+            // out of current scope, TODO calculate wages.
             Console.ReadKey();
         }
 
@@ -85,29 +79,33 @@ namespace PSMMain
 
         private static void DrawForecourt()
         {
-            Console.SetCursorPosition(0, 0);
+            while (CurrentlyDrawing)
+            {
+                //wait for the screen to be drawn before drawing again. 
+            }
+
+            Console.WriteLine("\n\n\n\n");
+            CurrentlyDrawing = true;
             Console.WriteLine("Queue");
-            Console.SetCursorPosition(0, 1);
             Console.WriteLine($"           Cars: {_vehicles.Count(x => x.PumpId == null)}");
-            Console.SetCursorPosition(0, 2);
             Console.WriteLine();
-            Console.SetCursorPosition(0, 3);
-            Console.Write($"1,{(_pumps.Single(x => x.Id == 1).CurrentlyActive ? "BUSY " : "AVAIL")} -------  2,{(_pumps.Single(x => x.Id == 2).CurrentlyActive ? "BUSY " : "AVAIL")} -------  3,{(_pumps.Single(x => x.Id == 3).CurrentlyActive ? "BUSY " : "AVAIL")} -------  ");
-            Console.SetCursorPosition(0, 4);
+            Console.Write($"1,{(_pumps.Single(x => x.Id == 1).CurrentlyActive ? "BUSY " : "AVAIL")} ------- ");
+            Console.Write($"2,{(_pumps.Single(x => x.Id == 2).CurrentlyActive ? "BUSY " : "AVAIL")} ------- ");
+            Console.Write($"3,{(_pumps.Single(x => x.Id == 3).CurrentlyActive ? "BUSY " : "AVAIL")} ------- ");
             Console.WriteLine();
-            Console.SetCursorPosition(0, 5);
-            Console.Write($"4,{(_pumps.Single(x => x.Id == 4).CurrentlyActive ? "BUSY " : "AVAIL")} -------  5,{(_pumps.Single(x => x.Id == 5).CurrentlyActive ? "BUSY " : "AVAIL")} -------  6,{(_pumps.Single(x => x.Id == 6).CurrentlyActive ? "BUSY " : "AVAIL")} -------  ");
-            Console.SetCursorPosition(0, 6);
+            Console.Write($"4,{(_pumps.Single(x => x.Id == 4).CurrentlyActive ? "BUSY " : "AVAIL")} ------- ");
+            Console.Write($"5,{(_pumps.Single(x => x.Id == 5).CurrentlyActive ? "BUSY " : "AVAIL")} ------- ");
+            Console.Write($"6,{(_pumps.Single(x => x.Id == 6).CurrentlyActive ? "BUSY " : "AVAIL")} ------- ");
             Console.WriteLine();
-            Console.SetCursorPosition(0, 7);
-            Console.Write($"7,{(_pumps.Single(x => x.Id == 7).CurrentlyActive ? "BUSY " : "AVAIL")} -------  8,{(_pumps.Single(x => x.Id == 8).CurrentlyActive ? "BUSY " : "AVAIL")} -------  9,{(_pumps.Single(x => x.Id == 9).CurrentlyActive ? "BUSY " : "AVAIL")} -------  ");
-            Console.SetCursorPosition(0, 8);
-            Console.WriteLine();
-            Console.SetCursorPosition(0, 9);
+            Console.Write($"7,{(_pumps.Single(x => x.Id == 7).CurrentlyActive ? "BUSY " : "AVAIL")} ------- ");
+            Console.Write($"8,{(_pumps.Single(x => x.Id == 8).CurrentlyActive ? "BUSY " : "AVAIL")} ------- ");
+            Console.Write($"9,{(_pumps.Single(x => x.Id == 9).CurrentlyActive ? "BUSY " : "AVAIL")} ------- ");
+            Console.WriteLine("\n\n");
             Console.WriteLine($"total Fuel Pumped = {_pumps.Sum(pump => pump.FuelDescended)}");
-            Console.SetCursorPosition(0, 10);
             Console.WriteLine($"total served cars = {_servedCars}");
-            Console.SetCursorPosition(0, 15);
+            Console.WriteLine("\n\n");
+
+            CurrentlyDrawing = false;
         }
 
 
@@ -135,8 +133,6 @@ namespace PSMMain
 
         private static void FuelTimerOnElapsed(object? sender, ElapsedEventArgs e)
         {
-            int leftPos = Console.CursorLeft, topPos = Console.CursorTop;
-
             var timer = (CustomTimer)sender!;
             var pump = _pumps.Single(x => x.Id == timer.PumpId);
             pump.CurrentlyActive = false;
@@ -146,7 +142,6 @@ namespace PSMMain
             _vehicles = _vehicles.ToList();
 
             _servedCars++;
-            Console.SetCursorPosition(leftPos, topPos);
             timer.Dispose();
             DrawForecourt();
         }
