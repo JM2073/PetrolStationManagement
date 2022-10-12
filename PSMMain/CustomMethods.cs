@@ -2,6 +2,18 @@
 
 public static class CustomMethods
 {
+    public enum VehicleTypes
+    {
+        Car,
+        Van,
+        HGV
+    }
+    public enum FuelTypes
+    {
+        Unleaded,
+        Diesel,
+        LPG
+    }
     public static int ParseStringToInt(string? inputText, string errorMessage)
     {
         var loop = true;
@@ -85,6 +97,7 @@ public static class CustomMethods
             Console.SetCursorPosition(Console.CursorLeft - msglength, Console.CursorTop);
         }
     }
+    
 }
 
 

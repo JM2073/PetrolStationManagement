@@ -2,22 +2,21 @@ namespace PSMMain;
 
 public class Vehicle
 {
-    public Vehicle(double tankSize, VehicleType type, int? pumpId, bool isAtPump)
+    public Vehicle(int id,  double tankSize, int? pumpId, bool isAtPump, CustomMethods.VehicleTypes vehicleType, CustomMethods.FuelTypes fuelType)
     {
+        Id = id;
         TankSize = tankSize;
-        Type = type;
         PumpId = pumpId;
         IsAtPump = isAtPump;
+        VehicleType = vehicleType;
+        FuelType = fuelType;
     }
 
+    public int Id { get; set; }
     public double TankSize { get; set; }
     
     public bool IsAtPump { get; set; }
     public int? PumpId { get; set; }
-    public VehicleType Type { get; set; }
-
-    public enum VehicleType
-    {
-        Car,
-    }
+    public CustomMethods.VehicleTypes VehicleType { get; set; }
+    public CustomMethods.FuelTypes FuelType { get; set; }
 }
