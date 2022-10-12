@@ -1,117 +1,158 @@
-﻿using System.Timers;
+﻿using System.Runtime.CompilerServices;
+using System.Timers;
 using Timer = System.Timers.Timer;
 
 namespace PSMMain
 {
-    public class CustomTimer : System.Timers.Timer
+    public class CustomTimer : Timer
     {
-        public int pumpId { get; set; }
+        public int PumpId { get; set; }
     }
 
     class Program
     {
-        private static int _waitingCars;
         private static int _servedCars;
         private static Timer _carSpawner = new(1500);
-        private static List<Pump> pumps = new();
+        private static List<Pump> _pumps = new();
+        private static List<Vehicle> _vehicles = new();
 
         public static void Main(string[] args)
         {
-            InitalStartup(9);
+            InitialStartup(9);
             var onShift = true;
-
-
-            //can do login here.
 
             while (onShift)
             {
-                DrawForcourt(cleanDraw: true);
-                if (_waitingCars > 0)
+                if (_vehicles.Any(x => x.IsAtPump == false))
                 {
-                    Console.WriteLine("you have cars in the quee, please select an available pump.");
-                    Console.Write(":");
+                    Console.SetCursorPosition(0, 14);
+                    Console.WriteLine("you have cars in the queue, please select an available pump.");
 
-                    var chois = CustomMethods.ParseStringToInt(Console.ReadLine(),
+                    var choice = CustomMethods.ParseStringToInt(Console.ReadLine(),
                         "please make sure you select a valid pump.");
 
-                    if (pumps.Where(x => x.CurrenttlyActive == false).Any(x => x.Id == chois))
+                    if (_pumps.Where(x => x.CurrentlyActive == false).Any(x => x.Id == choice))
                     {
-                        StartPumping(TimeSpan.FromSeconds(8), chois);
+                        StartPumping(TimeSpan.FromSeconds(8), choice);
                     }
                     else
                     {
+                        
+                        Console.SetCursorPosition(0, 18);
                         Console.WriteLine("please make sure the pump is available.");
+                        Console.SetCursorPosition(0, 19);
                         Console.WriteLine("press any key to try again.");
+                        Console.SetCursorPosition(0, 20);
                         Console.ReadKey();
                     }
                 }
                 else
                 {
-                    while (_waitingCars == 0)
+                    // if there are no objects wait for objects. if there are objects but they are all busy wait till a free object
+                    if (_vehicles.Count == 0)
                     {
-                        Console.WriteLine("waiting for a car.");
+                        while (_vehicles.Count == 0)
+                        {
+                            //TODO placeholder, replace with something like a waiting bar
+                        }
+                    }
+                    else
+                    {
+                        while (_vehicles.Count(x => x.IsAtPump) == _vehicles.Count)
+                        {
+                            //TODO placeholder, replace with something like a waiting bar
+                        }
                     }
                 }
+                Console.SetCursorPosition(0, 15);
+                CustomMethods.ClearCurrentConsoleLine();
             }
-
             Console.ReadKey();
         }
 
-        public static void DrawForcourt(List<Pump> pumps)
-        {
-            Console.Clear();
-            DrawForcourt();
-        }
-        
-        public static void DrawForcourt()
-        {
-            Console.SetCursorPosition(0, 0);
 
-            Console.WriteLine("Queue");
-            Console.WriteLine($"           Cars: {_waitingCars}");
-            Console.WriteLine();
-            Console.Write($"1,{(pumps.Single(x => x.Id == 1).CurrenttlyActive ? "Busy" : "Avail")} -------  ");
-            Console.Write($"2,{(pumps.Single(x => x.Id == 2).CurrenttlyActive ? "Busy" : "Avail")} -------  ");
-            Console.Write($"3,{(pumps.Single(x => x.Id == 3).CurrenttlyActive ? "Busy" : "Avail")} -------  ");
-            Console.WriteLine();
-            Console.Write($"4,{(pumps.Single(x => x.Id == 4).CurrenttlyActive ? "Busy" : "Avail")} -------  ");
-            Console.Write($"5,{(pumps.Single(x => x.Id == 5).CurrenttlyActive ? "Busy" : "Avail")} -------  ");
-            Console.Write($"6,{(pumps.Single(x => x.Id == 6).CurrenttlyActive ? "Busy" : "Avail")} -------  ");
-            Console.WriteLine();
-            Console.Write($"7,{(pumps.Single(x => x.Id == 7).CurrenttlyActive ? "Busy" : "Avail")} -------  ");
-            Console.Write($"8,{(pumps.Single(x => x.Id == 8).CurrenttlyActive ? "Busy" : "Avail")} -------  ");
-            Console.Write($"9,{(pumps.Single(x => x.Id == 9).CurrenttlyActive ? "Busy" : "Avail")} -------  ");
-            Console.WriteLine();
-            Console.WriteLine();
-            Console.WriteLine();
-            Console.WriteLine();
-            Console.WriteLine($"total Fuel Pumped = {pumps.Sum(pump => pump.FuleDespenced)}");
-            Console.WriteLine($"total served cars = {_servedCars}");
-            Console.WriteLine();
-            Console.WriteLine();
-            Console.WriteLine();
-        }
-
-        
-        /// <summary>
-        /// Sets all 9 of the pumps up.
-        /// starts the timer for car generation.
-        /// </summary>
-        private static void InitalStartup(int numOfPumps)
+        private static void InitialStartup(int numOfPumps)
         {
             for (var i = 1; i <= numOfPumps; i++)
-            {
-                pumps.Add(new Pump(i, false, 0.00));
-            }
+                _pumps.Add(new Pump(i, false, 0.00));
 
-            DrawForcourt();
-            CarGenrater();
+            _pumps = _pumps.ToList();
+
+            CarGenerator();
+            DrawForecourt();
         }
 
-        /// <summary>
-        /// Starts the timer that creates cars.
-        /// </summary>
-        private static void CarGenrater()
+
+        private static void DrawForecourt()
+        {
+            Console.SetCursorPosition(0, 0);
+            Console.WriteLine("Queue");
+            Console.SetCursorPosition(0, 1);
+            Console.WriteLine($"           Cars: {_vehicles.Count(x => x.PumpId == null)}");
+            Console.SetCursorPosition(0, 2);
+            Console.WriteLine();
+            Console.SetCursorPosition(0, 3);
+            Console.Write($"1,{(_pumps.Single(x => x.Id == 1).CurrentlyActive ? "BUSY " : "AVAIL")} -------  2,{(_pumps.Single(x => x.Id == 2).CurrentlyActive ? "BUSY " : "AVAIL")} -------  3,{(_pumps.Single(x => x.Id == 3).CurrentlyActive ? "BUSY " : "AVAIL")} -------  ");
+            Console.SetCursorPosition(0, 4);
+            Console.WriteLine();
+            Console.SetCursorPosition(0, 5);
+            Console.Write($"4,{(_pumps.Single(x => x.Id == 4).CurrentlyActive ? "BUSY " : "AVAIL")} -------  5,{(_pumps.Single(x => x.Id == 5).CurrentlyActive ? "BUSY " : "AVAIL")} -------  6,{(_pumps.Single(x => x.Id == 6).CurrentlyActive ? "BUSY " : "AVAIL")} -------  ");
+            Console.SetCursorPosition(0, 6);
+            Console.WriteLine();
+            Console.SetCursorPosition(0, 7);
+            Console.Write($"7,{(_pumps.Single(x => x.Id == 7).CurrentlyActive ? "BUSY " : "AVAIL")} -------  8,{(_pumps.Single(x => x.Id == 8).CurrentlyActive ? "BUSY " : "AVAIL")} -------  9,{(_pumps.Single(x => x.Id == 9).CurrentlyActive ? "BUSY " : "AVAIL")} -------  ");
+            Console.SetCursorPosition(0, 8);
+            Console.WriteLine();
+            Console.SetCursorPosition(0, 9);
+            Console.WriteLine($"total Fuel Pumped = {_pumps.Sum(pump => pump.FuelDescended)}");
+            Console.SetCursorPosition(0, 10);
+            Console.WriteLine($"total served cars = {_servedCars}");
+            Console.SetCursorPosition(0, 15);
+        }
+
+
+        private static void StartPumping(TimeSpan interval, int pumpId)
+        {
+            CustomTimer fuelTimer = new();
+            var vehicle = _vehicles.First(x => x.PumpId == null);
+
+            vehicle.PumpId = pumpId;
+            vehicle.IsAtPump = true;
+
+            _vehicles = _vehicles.ToList();
+
+            _pumps.Single(x => x.Id == pumpId).CurrentlyActive = true;
+
+            fuelTimer.Elapsed += FuelTimerOnElapsed;
+            fuelTimer.Interval = interval.TotalMilliseconds;
+            fuelTimer.PumpId = pumpId;
+            fuelTimer.Enabled = true;
+            fuelTimer.AutoReset = false;
+            fuelTimer.Start();
+            DrawForecourt();
+        }
+
+
+        private static void FuelTimerOnElapsed(object? sender, ElapsedEventArgs e)
+        {
+            int leftPos = Console.CursorLeft, topPos = Console.CursorTop;
+
+            var timer = (CustomTimer)sender!;
+            var pump = _pumps.Single(x => x.Id == timer.PumpId);
+            pump.CurrentlyActive = false;
+            pump.FuelDescended += (timer.Interval / 1000) * 1.5;
+
+            _vehicles.Remove(_vehicles.Single(x => x.PumpId == pump.Id));
+            _vehicles = _vehicles.ToList();
+
+            _servedCars++;
+            Console.SetCursorPosition(leftPos, topPos);
+            timer.Dispose();
+            DrawForecourt();
+        }
+
+
+        private static void CarGenerator()
         {
             _carSpawner.Elapsed += CarSpawnerOnElapsed;
             _carSpawner.Enabled = true;
@@ -119,40 +160,13 @@ namespace PSMMain
             _carSpawner.Start();
         }
 
-        private static void StartPumping(TimeSpan interval)
-        {
-            CustomTimer _fuleTimer = new();
-            _waitingCars--;
-
-            pumps.Single(x => x.Id == pumpId).CurrenttlyActive = true;
-            _fuleTimer.Elapsed += FuleTimerOnElapsed;
-            _fuleTimer.Interval = interval.TotalMilliseconds;
-            _fuleTimer.Enabled = true;
-            _fuleTimer.AutoReset = false;
-            _fuleTimer.pumpId = pumpId;
-            _fuleTimer.Start();
-        }
-
-        private static void FuleTimerOnElapsed(object? sender, ElapsedEventArgs e)
-        {
-            int leftPos = Console.CursorLeft, topPos = Console.CursorTop;
-            _servedCars++;
-
-            var pump = pumps.Single(x => x.Id == ((CustomTimer)sender).pumpId);
-            pump.CurrenttlyActive = false;
-            pump.FuleDespenced += (((CustomTimer)sender).Interval / 1000) * 1.5;
-
-            ((CustomTimer)sender).Dispose();
-            DrawForcourt();
-            Console.SetCursorPosition(leftPos, topPos);
-        }
 
         private static void CarSpawnerOnElapsed(object? sender, ElapsedEventArgs e)
         {
-            int leftPos = Console.CursorLeft, topPos = Console.CursorTop;
-            DrawForcourt();
-            _waitingCars++;
-            Console.SetCursorPosition(leftPos, topPos);
+            // at this current time the tankSize is irrelevant. for future TODO: generate tank size and assign it to new vehicle 
+            _vehicles.Add(new Vehicle(tankSize: 0.00, type: Vehicle.VehicleType.Car, pumpId: null, isAtPump: false));
+            _vehicles = _vehicles.ToList();
+            DrawForecourt();
         }
     }
 }
