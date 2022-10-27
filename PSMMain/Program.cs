@@ -2,6 +2,9 @@
 using System.Timers;
 using Timer = System.Timers.Timer;
 
+
+// TODO blackbox testing lookup 
+
 namespace PSMMain
 {
     public class CustomTimer : Timer
@@ -26,31 +29,36 @@ namespace PSMMain
 
         public static void Main(string[] args)
         {
+#if DEBUG
+            var onShift = true;
+#else
             var onShift = SecurityScreen();
+#endif
 
             InitialStartup(9);
             while (onShift)
             {
-                DrawForecourt();
-
-                Console.WriteLine("========");
-                Console.WriteLine("MENU");
-                Console.WriteLine("========");
-                Console.WriteLine("1.) Send a Car");
-                Console.WriteLine("2.) Logout");
-                var choice = CustomMethods.ParseStringToInt(Console.ReadLine(), "please choice a valid option");
-                switch (choice)
-                {
-                    case 1:
-                        ManageForecourt();
-                        break;
-                    case 2:
-                        onShift = false;
-                        break;
-                    default:
-                        Console.WriteLine("please choice a valid option");
-                        break;
-                }
+                RenderForecourt();
+                ManageForecourt();
+                //
+                // Console.WriteLine("========");
+                // Console.WriteLine("MENU");
+                // Console.WriteLine("========");
+                // Console.WriteLine("1.) Send a Car");
+                // Console.WriteLine("2.) Logout");
+                // var choice = CustomMethods.ParseStringToInt(Console.ReadLine(), "please choice a valid option");
+                // switch (choice)
+                // {
+                //     case 1:
+                //         ManageForecourt();
+                //         break;
+                //     case 2:
+                //         onShift = false;
+                //         break;
+                //     default:
+                //         Console.WriteLine("please choice a valid option");
+                //         break;
+                // }
             }
 
             _carSpawner.Close();
@@ -63,23 +71,28 @@ namespace PSMMain
         {
             if (_vehicles.Any(x => x.IsAtPump == false))
             {
+                int choice;
                 Console.WriteLine("you have cars in the queue, please select an available pump.");
 
-                var choice = CustomMethods.ParseStringToInt(Console.ReadLine(),
-                    "please make sure you select a valid pump.");
+
+                if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.NumPad5)
+                {
+                    if (_pumps.Where(x => x.CurrentlyActive == false).Any(x => x.Id == 5))
+                    {
+                        StartPumping(TimeSpan.FromMilliseconds(_ran.Next(3000, 5000)), 5);
+                    }
+                }
+
+                
+                
+                //
+                // var choice = CustomMethods.ParseStringToInt(Console.ReadLine(),
+                //     "please make sure you select a valid pump.");
+                
 
                 _currentlyDrawing = false;
 
-                if (_pumps.Where(x => x.CurrentlyActive == false).Any(x => x.Id == choice))
-                {
-                    StartPumping(TimeSpan.FromMilliseconds(_ran.Next(3000, 5000)), choice);
-                }
-                else
-                {
-                    Console.WriteLine("please make sure the pump is available.");
-                    Console.WriteLine("press any key to try again.");
-                    Console.ReadKey();
-                }
+           
             }
             else
             {
@@ -123,7 +136,7 @@ namespace PSMMain
 
                 Console.WriteLine();
 
-                if (email == _currentUser.Email == false && pass == _currentUser.Password == false)
+                if (email == _currentUser.Email == false || pass == _currentUser.Password == false)
                 {
                     Console.Clear();
                     Console.WriteLine("Please enter valid login information\n");
@@ -149,13 +162,15 @@ namespace PSMMain
         }
 
 
-        private static void DrawForecourt()
+        private static void RenderForecourt()
         {
             //wait for the screen to be drawn before drawing again. 
-            while (_currentlyDrawing)
-            {
-            }
+            //TODO comment out fornow 
+            // while (_currentlyDrawing)
+            // {
+            // }
 
+            Console.Clear();
             Console.WriteLine("\n\n\n\n");
             _currentlyDrawing = true;
 
@@ -188,6 +203,7 @@ namespace PSMMain
 
         private static void StartPumping(TimeSpan interval, int pumpId)
         {
+            //TODO: check there is a pump matching the ID
             CustomTimer fuelTimer = new();
             var vehicle = _vehicles.First(x => x.PumpId == null);
 
@@ -204,7 +220,7 @@ namespace PSMMain
             fuelTimer.Enabled = true;
             fuelTimer.AutoReset = false;
             fuelTimer.Start();
-            DrawForecourt();
+            RenderForecourt();
         }
 
 
@@ -235,7 +251,7 @@ namespace PSMMain
 
             _servedCars++;
             timer.Close();
-            DrawForecourt();
+            RenderForecourt();
         }
 
 
@@ -252,6 +268,7 @@ namespace PSMMain
         {
             _carSpawner.Interval = _ran.Next(1500, 2200);
 
+            // make sure there is only one car in que
             if (_vehicles.Where(x => x.IsAtPump == false).ToList().Count == 1)
                 return;
             _vehicalIdCount++;
@@ -262,7 +279,7 @@ namespace PSMMain
             _vehicles.Add(vehicle);
 
             _vehicles = _vehicles.ToList();
-            DrawForecourt();
+            RenderForecourt();
 
             CarTimout(vehicle);
         }
@@ -285,13 +302,16 @@ namespace PSMMain
             var vehicle = _vehicles.Single(x => x.Id == timer.CarId);
 
             if (vehicle.IsAtPump)
+            {
+                timer.Close();
                 return;
+            }
             
             _vehicles.Remove(vehicle);
             _vehicles = _vehicles.ToList();
             _lostCars++;
             timer.Close();
-            DrawForecourt();
+            RenderForecourt();
         }
     }
 }
