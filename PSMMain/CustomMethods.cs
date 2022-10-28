@@ -47,6 +47,7 @@ public static class CustomMethods
     }
     
     
+    /*
     /// <summary>
     /// https://stackoverflow.com/a/47647871
     /// </summary>
@@ -97,6 +98,7 @@ public static class CustomMethods
             Console.SetCursorPosition(Console.CursorLeft - msglength, Console.CursorTop);
         }
     }
+    */
     
 }
 
