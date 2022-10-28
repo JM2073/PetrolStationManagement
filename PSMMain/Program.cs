@@ -15,8 +15,7 @@ namespace PSMMain
 
     class Program
     {
-        // private static CustomMethods.ConsoleSpinner _spinner = new();
-
+        private static int _queCount;
         private static bool _currentlyDrawing;
         private static int _servedCars;
         private static int _lostCars;
@@ -50,63 +49,57 @@ namespace PSMMain
 
         private static bool ManageForecourt()
         {
-            lock (_vehicles)
-            {
-                if (_vehicles.ToList().All(x => x.IsAtPump()) || _vehicles.Count == 0)
-                    return true;
-            }
+            if (_queCount == 0)
+                return true;
 
             int choice = 0;
-            lock (_vehicles)
+            while (_queCount != 0)
             {
-                while (_vehicles.ToList().Any(x => x.IsAtPump() == false))
+                if (Console.KeyAvailable)
+                    switch (Console.ReadKey(true).Key)
+                    {
+                        case ConsoleKey.NumPad1:
+                            choice = 1;
+                            break;
+                        case ConsoleKey.NumPad2:
+                            choice = 2;
+                            break;
+                        case ConsoleKey.NumPad3:
+                            choice = 3;
+                            break;
+                        case ConsoleKey.NumPad4:
+                            choice = 4;
+                            break;
+                        case ConsoleKey.NumPad5:
+                            choice = 5;
+                            break;
+                        case ConsoleKey.NumPad6:
+                            choice = 6;
+                            break;
+                        case ConsoleKey.NumPad7:
+                            choice = 7;
+                            break;
+                        case ConsoleKey.NumPad8:
+                            choice = 8;
+                            break;
+                        case ConsoleKey.NumPad9:
+                            choice = 9;
+                            break;
+                        case ConsoleKey.Escape:
+                            return false;
+                    }
+
+                var pump = _pumps.SingleOrDefault(x => x.Id == choice);
+                if (pump is { CurrentlyActive: false })
                 {
-                    if (Console.KeyAvailable)
-                        switch (Console.ReadKey(true).Key)
-                        {
-                            case ConsoleKey.NumPad1:
-                                choice = 1;
-                                break;
-                            case ConsoleKey.NumPad2:
-                                choice = 2;
-                                break;
-                            case ConsoleKey.NumPad3:
-                                choice = 3;
-                                break;
-                            case ConsoleKey.NumPad4:
-                                choice = 4;
-                                break;
-                            case ConsoleKey.NumPad5:
-                                choice = 5;
-                                break;
-                            case ConsoleKey.NumPad6:
-                                choice = 6;
-                                break;
-                            case ConsoleKey.NumPad7:
-                                choice = 7;
-                                break;
-                            case ConsoleKey.NumPad8:
-                                choice = 8;
-                                break;
-                            case ConsoleKey.NumPad9:
-                                choice = 9;
-                                break;
-                            case ConsoleKey.Escape:
-                                return false;
-                        }
-
-                    var pump = _pumps.SingleOrDefault(x => x.Id == choice);
-                    if (pump is { CurrentlyActive: false })
-                    {
-                        StartPumping(TimeSpan.FromMilliseconds(_ran.Next(3000, 5000)), choice);
-                    }
-                    else if (pump is { CurrentlyActive: true })
-                    {
-                        Console.WriteLine("please select an available pump.");
-                    }
-
-                    choice = 0;
+                    StartPumping(TimeSpan.FromMilliseconds(_ran.Next(3000, 5000)), choice);
                 }
+                else if (pump is { CurrentlyActive: true })
+                {
+                    Console.WriteLine("please select an available pump.");
+                }
+
+                choice = 0;
             }
 
             return true;
@@ -181,9 +174,13 @@ namespace PSMMain
 
             _currentlyDrawing = true;
             Console.Clear();
+            // Console.SetCursorPosition(0,0);
             Console.WriteLine($"Petrol Station Management - Welcome {_currentUser.FirstName} {_currentUser.LastName}");
             Console.WriteLine("Queue");
-            Console.WriteLine($"           Cars: {_vehicles.Count(x => x.IsAtPump() == false)}");
+            Console.WriteLine($"           Cars: {_queCount}");
+#if DEBUG
+            Console.WriteLine($"           (DEBUG) TOTAL Cars: {_vehicleIdCount}");
+#endif
             Console.WriteLine();
             Console.Write($"1,{(_pumps.Single(x => x.Id == 1).CurrentlyActive ? "BUSY " : "AVAIL")} ------- ");
             Console.Write($"2,{(_pumps.Single(x => x.Id == 2).CurrentlyActive ? "BUSY " : "AVAIL")} ------- ");
@@ -205,14 +202,14 @@ namespace PSMMain
             Console.WriteLine("\n\n");
             Console.WriteLine("To finish your shift for the day please press the 'ESC' key");
 
-            if (_vehicles.Count(x => x.IsAtPump() == false) != 0)
+            if (_queCount != 0)
             {
                 Console.WriteLine("you have cars in the queue, please select an available pump.");
                 Console.WriteLine(
                     "inorder to send a car to a pump please select the corresponding key on your number pad, eg: for pump 1 press the 'NUM 1' key");
             }
 
-            if (_vehicles.All(x => x.IsAtPump()) || _vehicles.Count == 0)
+            if (_queCount == 0)
             {
                 Console.WriteLine("please wait for a vehicle to join the que ");
             }
@@ -232,13 +229,14 @@ namespace PSMMain
             _vehicles = _vehicles.ToList();
 
             _pumps.Single(x => x.Id == pumpId).CurrentlyActive = true;
-
+            
             fuelTimer.Elapsed += FuelTimerOnElapsed;
             fuelTimer.Interval = interval.TotalMilliseconds;
             fuelTimer.PumpId = pumpId;
             fuelTimer.Enabled = true;
             fuelTimer.AutoReset = false;
             fuelTimer.Start();
+            _queCount--;
             RenderForecourt();
         }
 
@@ -290,16 +288,18 @@ namespace PSMMain
             _carSpawner.Interval = _ran.Next(1500, 2200);
 
             // make sure there is only one car in que
-            if (_vehicles.Where(x => x.IsAtPump() == false).ToList().Count == 1)
-                return;
-            _vehicleIdCount++;
+            // if (_vehicles.Where(x => x.IsAtPump() == false).ToList().Count == 1)
+            //     return;
 
+            _queCount++;
+            _vehicleIdCount++;
             // at this current time the tankSize is irrelevant. for future TODO: generate tank size and assign it to new vehicle 
             var vehicle = new Vehicle(_vehicleIdCount, 0.00, (CustomMethods.VehicleTypes)_ran.Next(0, 3),
                 (CustomMethods.FuelTypes)_ran.Next(0, 3));
             _vehicles.Add(vehicle);
             _vehicles = _vehicles.ToList();
-            CarTimout(vehicle);
+            
+            // CarTimout(vehicle);
             RenderForecourt();
         }
 
@@ -319,7 +319,6 @@ namespace PSMMain
         {
             var timer = (CustomTimer)sender!;
 
-
             var vehicle = _vehicles.Single(x => x.Id == timer.CarId);
 
             if (vehicle.IsAtPump())
@@ -331,9 +330,16 @@ namespace PSMMain
             _vehicles.Remove(vehicle);
             _vehicles = _vehicles.ToList();
 
+            _queCount--;
             _lostCars++;
             timer.Close();
             RenderForecourt();
         }
+            
+        // private static void RemoveVeh(Vehicle v)
+        // {
+        //     _vehicles.Remove(v);
+        //     _vehicles = _vehicles.ToList();
+        // }
     }
 }
