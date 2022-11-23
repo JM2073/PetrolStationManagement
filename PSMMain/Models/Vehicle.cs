@@ -4,16 +4,15 @@ namespace PSMMain;
 
 public class Vehicle
 {
-    public Vehicle(int id,  double tankSize, CustomMethods.VehicleTypes vehicleType, CustomMethods.FuelTypes fuelType)
+    public Vehicle(int id,  double tankLevel, CustomMethods.VehicleTypes vehicleType)
     {
         Id = id;
-        TankSize = tankSize;
+        TankLevel = tankLevel;
         VehicleType = vehicleType;
-        FuelType = fuelType;
     }
 
     public int Id { get; set; }
-    public double TankSize { get; set; }
+    public double TankLevel { get; set; }
     public int? PumpId { get; set; }
     public CustomMethods.VehicleTypes VehicleType { get; set; }
     public CustomMethods.FuelTypes FuelType { get; set; }

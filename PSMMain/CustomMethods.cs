@@ -2,6 +2,7 @@
 
 public static class CustomMethods
 {
+    public static Random _ran = new();
     public enum VehicleTypes
     {
         Car,
@@ -16,7 +17,7 @@ public static class CustomMethods
     }
     public static int ParseStringToInt(string? inputText, string errorMessage)
     {
-        var loop = true;
+        bool loop = true;
         var result = 0;
         while (loop)
         {
