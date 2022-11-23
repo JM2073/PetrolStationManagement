@@ -20,12 +20,18 @@ namespace PSMMain
         private static int _servedCars;
         private static int _lostCars;
         private static int _vehicleIdCount;
+        private static double _totalRev;
         private static User _currentUser = new("John", "Smith");
         private static Timer _carSpawner = new(5000);
         private static Random _ran = new();
         private static List<Pump> _pumps = new();
         private static List<Vehicle> _vehicles = new();
 
+        // as of typing these are the avrage prices of fule in the uk.
+        // https://www.mylpg.eu/stations/united-kingdom/prices/
+        private static double PriceOfUnleaded = 1.6;
+        private static double PriceOfDiesel = 1.84;
+        private static double PriceOfLPG = 0.85;
         public static void Main(string[] args)
         {
 #if DEBUG
@@ -194,11 +200,12 @@ namespace PSMMain
             Console.Write($"8,{(_pumps.Single(x => x.Id == 8).CurrentlyActive ? "BUSY " : "AVAIL")} ------- ");
             Console.Write($"9,{(_pumps.Single(x => x.Id == 9).CurrentlyActive ? "BUSY " : "AVAIL")} ------- ");
             Console.WriteLine("\n\n");
-            Console.WriteLine($"total Unleaded Fuel Pumped = {_pumps.Sum(pump => pump.UnloadedFuelDescended):0.00}");
-            Console.WriteLine($"total Diesel Fuel Pumped = {_pumps.Sum(pump => pump.DieselFuelDescended):0.00}");
-            Console.WriteLine($"total LPG Fuel Pumped = {_pumps.Sum(pump => pump.LpgFuelDescended):0.00}");
+            Console.WriteLine($"Liters sold:");
+            Console.WriteLine($"    Unleaded Fuel Pumped = {_pumps.Sum(pump => pump.UnloadedFuelDescended):0.00}");
+            Console.WriteLine($"    Diesel Fuel Pumped = {_pumps.Sum(pump => pump.DieselFuelDescended):0.00}");
+            Console.WriteLine($"    LPG Fuel Pumped = {_pumps.Sum(pump => pump.LpgFuelDescended):0.00}");
             Console.WriteLine($"total served cars = {_servedCars}");
-            Console.WriteLine($"total Lost cars = {_lostCars}");
+            Console.WriteLine($"total cars left early = {_lostCars}");
             Console.WriteLine("\n\n");
             Console.WriteLine("To finish your shift for the day please press the 'ESC' key");
 
@@ -248,17 +255,21 @@ namespace PSMMain
             pump.CurrentlyActive = false;
 
             var vehicle = _vehicles.Single(x => x.PumpId == pump.Id);
-
+            double amountPumped = (timer.Interval / 1000) * 1.5;
+            
             switch (vehicle.FuelType)
             {
                 case CustomMethods.FuelTypes.Unleaded:
-                    pump.UnloadedFuelDescended += (timer.Interval / 1000) * 1.5;
+                    pump.UnloadedFuelDescended += amountPumped;
+                    _totalRev += amountPumped * PriceOfUnleaded;
                     break;
                 case CustomMethods.FuelTypes.Diesel:
-                    pump.DieselFuelDescended += (timer.Interval / 1000) * 1.5;
+                    pump.DieselFuelDescended += amountPumped;
+                    _totalRev += amountPumped * PriceOfDiesel;
                     break;
                 case CustomMethods.FuelTypes.LPG:
-                    pump.LpgFuelDescended += (timer.Interval / 1000) * 1.5;
+                    pump.LpgFuelDescended += amountPumped;
+                    _totalRev += amountPumped * PriceOfLPG;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException();
