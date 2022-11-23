@@ -34,6 +34,7 @@ namespace PSMMain
         private static double PriceOfLPG = 0.85;
         public static void Main(string[] args)
         {
+            
 #if DEBUG
             var onShift = true;
 #else
@@ -107,13 +108,19 @@ namespace PSMMain
 
                 choice = 0;
             }
-
+            
+            //https://stackoverflow.com/a/6541403 
+            //cycles though cached inputs to clear them out.
+            while ( Console.KeyAvailable )
+            {
+                ConsoleKeyInfo key = Console.ReadKey();
+            }
             return true;
         }
 
         private static bool SecurityScreen()
         {
-            var authenticate = false;
+            bool authenticate = false;
             while (authenticate == false)
             {
                 Console.WriteLine("welcome to the Petrol Station Management software for Broken Petrol Ltd");
@@ -173,7 +180,6 @@ namespace PSMMain
         private static void RenderForecourt()
         {
             //wait for the screen to be drawn before drawing again. 
-            //TODO comment out for now 
             while (_currentlyDrawing)
             {
             }
@@ -190,7 +196,7 @@ namespace PSMMain
             Console.WriteLine();
             Console.Write($"1,{(_pumps.Single(x => x.Id == 1).CurrentlyActive ? "BUSY " : "AVAIL")} ------- ");
             Console.Write($"2,{(_pumps.Single(x => x.Id == 2).CurrentlyActive ? "BUSY " : "AVAIL")} ------- ");
-            Console.Write($"3,{(_pumps.Single(x => x.Id == 3).CurrentlyActive ? "BUSY " : "AVAIL")} ------- ");
+            Console.Write($"3,{(_pumps.Single(x => x.Id == 3).CurrentlyActive ? "BUSYwha " : "AVAIL")} ------- ");
             Console.WriteLine();
             Console.Write($"4,{(_pumps.Single(x => x.Id == 4).CurrentlyActive ? "BUSY " : "AVAIL")} ------- ");
             Console.Write($"5,{(_pumps.Single(x => x.Id == 5).CurrentlyActive ? "BUSY " : "AVAIL")} ------- ");
@@ -228,7 +234,7 @@ namespace PSMMain
         private static void StartPumping(TimeSpan interval, int pumpId)
         {
             //TODO: check there is a pump matching the ID
-            CustomTimer fuelTimer = new();
+            CustomTimer fuelTimer = new CustomTimer();
             var vehicle = _vehicles.First(x => x.PumpId == null);
 
             vehicle.PumpId = pumpId;
@@ -299,18 +305,33 @@ namespace PSMMain
             _carSpawner.Interval = _ran.Next(1500, 2200);
 
             // make sure there is only one car in que
-            // if (_vehicles.Where(x => x.IsAtPump() == false).ToList().Count == 1)
-            //     return;
+            if (_vehicles.Where(x => x.IsAtPump() == false).ToList().Count >= 5)
+                return;
 
             _queCount++;
             _vehicleIdCount++;
             // at this current time the tankSize is irrelevant. for future TODO: generate tank size and assign it to new vehicle 
-            var vehicle = new Vehicle(_vehicleIdCount, 0.00, (CustomMethods.VehicleTypes)_ran.Next(0, 3),
-                (CustomMethods.FuelTypes)_ran.Next(0, 3));
+            var vehicle = new Vehicle(_vehicleIdCount, 0.00, (CustomMethods.VehicleTypes)_ran.Next(0, 3));
+            switch (vehicle.VehicleType)
+            {
+                case CustomMethods.VehicleTypes.Car:
+                    vehicle.FuelType = (CustomMethods.FuelTypes)_ran.Next(0, 3);
+                    vehicle.TankLevel = _ran.Next(1, 25);
+                    break;
+                case CustomMethods.VehicleTypes.Van:
+                    vehicle.FuelType = (CustomMethods.FuelTypes) _ran.Next(0, 2);
+                    vehicle.TankLevel = _ran.Next(1,40);
+                    break;
+                case CustomMethods.VehicleTypes.HGV:
+                    vehicle.FuelType = CustomMethods.FuelTypes.Diesel;
+                    vehicle.TankLevel = _ran.Next(1, 75);
+                    break;
+            }
+            
             _vehicles.Add(vehicle);
             _vehicles = _vehicles.ToList();
             
-            // CarTimout(vehicle);
+            CarTimout(vehicle);
             RenderForecourt();
         }
 
@@ -319,7 +340,7 @@ namespace PSMMain
             CustomTimer carTimeOut = new();
 
             carTimeOut.Elapsed += CarTimeOutOnElapsed;
-            carTimeOut.Interval = 1500;
+            carTimeOut.Interval = _ran.Next(1000,2000);
             carTimeOut.CarId = vehicle.Id;
             carTimeOut.Enabled = true;
             carTimeOut.AutoReset = false;
@@ -346,11 +367,6 @@ namespace PSMMain
             timer.Close();
             RenderForecourt();
         }
-            
-        // private static void RemoveVeh(Vehicle v)
-        // {
-        //     _vehicles.Remove(v);
-        //     _vehicles = _vehicles.ToList();
-        // }
+        
     }
 }
