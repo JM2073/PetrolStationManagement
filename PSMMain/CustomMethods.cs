@@ -3,18 +3,7 @@
 public static class CustomMethods
 {
     public static Random _ran = new();
-    public enum VehicleTypes
-    {
-        Car,
-        Van,
-        HGV
-    }
-    public enum FuelTypes
-    {
-        Unleaded,
-        Diesel,
-        LPG
-    }
+   
     public static int ParseStringToInt(string? inputText, string errorMessage)
     {
         bool loop = true;
