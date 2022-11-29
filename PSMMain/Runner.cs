@@ -1,48 +1,49 @@
-﻿namespace PSMMain;
-
-public class Runner
+﻿using System.Timers;
+using Timer = System.Timers.Timer;
+namespace PSMMain
 {
-    private bool _currentlyDrawing;
-    private int _servedCars;
-    private int _queCount;
-    private int _lostCars;
-    private int _vehicleIdCount;
-    private double _totalRev;
-    private User _currentUser = new("John", "Smith");
-    private Timer _carSpawner = new(5000);
-    private Random _ran = new();
-    private List<Pump> _pumps = new();
-    private List<Vehicle> _vehicles = new();
-
-    // as of typing these are the avrage prices of fule in the uk.
-    // https://www.mylpg.eu/stations/united-kingdom/prices/
-    private double PriceOfUnleaded = 1.6;
-    private double PriceOfDiesel = 1.84;
-    private double PriceOfLPG = 0.85;
-    
-    public void Run()
+    public class Runner
     {
-         
+        private bool _currentlyDrawing;
+        private int _servedCars;
+        private int _queCount;
+        private int _lostCars;
+        private int _vehicleIdCount;
+        private double _totalRev;
+        private User _currentUser = new("John", "Smith");
+        private Timer _carSpawner = new(5000);
+        private Random _ran = new();
+        private List<Pump> _pumps = new();
+        private List<Vehicle> _vehicles = new();
+        
+        // as of typing these are the avrage prices of fule in the uk.
+        // https://www.mylpg.eu/stations/united-kingdom/prices/
+        private double PriceOfUnleaded = 1.6;
+        private double PriceOfDiesel = 1.84;
+        private double PriceOfLPG = 0.85;
+
+        public void Run()
+        {
 #if DEBUG
-        var onShift = true;
+            var onShift = true;
 #else
             var onShift = SecurityScreen();
 #endif
 
-        InitialStartup(9);
+            InitialStartup(9);
 
-        while (onShift)
-        {
-            onShift = ManageForecourt();
+            while (onShift)
+            {
+                onShift = ManageForecourt();
+            }
+
+            _carSpawner.Close();
+            Console.WriteLine("well done, thank you for all your hard work!");
+            // out of current scope, TODO calculate wages.
+            Console.ReadKey();
         }
 
-        _carSpawner.Close();
-        Console.WriteLine("well done, thank you for all your hard work!");
-        // out of current scope, TODO calculate wages.
-        Console.ReadKey();
-    }
-    
-        private static bool ManageForecourt()
+        private bool ManageForecourt()
         {
             if (_queCount == 0)
                 return true;
@@ -87,7 +88,7 @@ public class Runner
                 var pump = _pumps.SingleOrDefault(x => x.Id == choice);
                 if (pump is { CurrentlyActive: false })
                 {
-                    StartPumping(TimeSpan.FromMilliseconds(_ran.Next(3000, 5000)), choice);
+                    StartPumping(choice);
                 }
                 else if (pump is { CurrentlyActive: true })
                 {
@@ -96,17 +97,18 @@ public class Runner
 
                 choice = 0;
             }
-            
+
             //https://stackoverflow.com/a/6541403 
             //cycles though cached inputs to clear them out.
-            while ( Console.KeyAvailable )
+            while (Console.KeyAvailable)
             {
                 ConsoleKeyInfo key = Console.ReadKey();
             }
+
             return true;
         }
 
-        private static bool SecurityScreen()
+        private bool SecurityScreen()
         {
             bool authenticate = false;
             while (authenticate == false)
@@ -153,7 +155,7 @@ public class Runner
             return authenticate;
         }
 
-        private static void InitialStartup(int numOfPumps)
+        private void InitialStartup(int numOfPumps)
         {
             for (var i = 1; i <= numOfPumps; i++)
                 _pumps.Add(new Pump(i, false, 0.00, 0.00, 0.00));
@@ -164,8 +166,7 @@ public class Runner
             CarGenerator();
         }
 
-
-        private static void RenderForecourt()
+        private void RenderForecourt()
         {
             //wait for the screen to be drawn before drawing again. 
             while (_currentlyDrawing)
@@ -198,6 +199,8 @@ public class Runner
             Console.WriteLine($"    Unleaded Fuel Pumped = {_pumps.Sum(pump => pump.UnloadedFuelDescended):0.00}");
             Console.WriteLine($"    Diesel Fuel Pumped = {_pumps.Sum(pump => pump.DieselFuelDescended):0.00}");
             Console.WriteLine($"    LPG Fuel Pumped = {_pumps.Sum(pump => pump.LpgFuelDescended):0.00}");
+            Console.WriteLine($"total Money Made = {_totalRev}");
+            Console.WriteLine($"1% for commission = {_totalRev / 100}");
             Console.WriteLine($"total served cars = {_servedCars}");
             Console.WriteLine($"total cars left early = {_lostCars}");
             Console.WriteLine("\n\n");
@@ -219,7 +222,7 @@ public class Runner
         }
 
 
-        private static void StartPumping(TimeSpan interval, int pumpId)
+        private void StartPumping(int pumpId)
         {
             //TODO: check there is a pump matching the ID
             CustomTimer fuelTimer = new CustomTimer();
@@ -232,7 +235,7 @@ public class Runner
             _pumps.Single(x => x.Id == pumpId).CurrentlyActive = true;
             
             fuelTimer.Elapsed += FuelTimerOnElapsed;
-            fuelTimer.Interval = interval.TotalMilliseconds;
+            fuelTimer.Interval = CalculateFuelTime(vehicle);
             fuelTimer.PumpId = pumpId;
             fuelTimer.Enabled = true;
             fuelTimer.AutoReset = false;
@@ -241,8 +244,21 @@ public class Runner
             RenderForecourt();
         }
 
+        private double CalculateFuelTime(Vehicle vehicle)
+        {
+            double remainingTankSize = vehicle.VehicleType switch
+            {
+                Vehicle.VehicleTypes.Car => 50 - vehicle.TankLevel,
+                Vehicle.VehicleTypes.Van => 80 - vehicle.TankLevel,
+                Vehicle.VehicleTypes.HGV => 150 - vehicle.TankLevel,
+                _ => throw new ArgumentOutOfRangeException()
+            };
 
-        private static void FuelTimerOnElapsed(object? sender, ElapsedEventArgs e)
+            return (remainingTankSize * 1.5) * 1000;
+        }
+
+
+        private void FuelTimerOnElapsed(object? sender, ElapsedEventArgs e)
         {
             var timer = (CustomTimer)sender!;
             var pump = _pumps.Single(x => x.Id == timer.PumpId);
@@ -250,7 +266,7 @@ public class Runner
 
             var vehicle = _vehicles.Single(x => x.PumpId == pump.Id);
             double amountPumped = (timer.Interval / 1000) * 1.5;
-            
+
             switch (vehicle.FuelType)
             {
                 case Vehicle.FuelTypes.Unleaded:
@@ -279,7 +295,7 @@ public class Runner
         }
 
 
-        private static void CarGenerator()
+        private void CarGenerator()
         {
             _carSpawner.Elapsed += CarSpawnerOnElapsed;
             _carSpawner.Enabled = true;
@@ -288,11 +304,11 @@ public class Runner
         }
 
 
-        private static void CarSpawnerOnElapsed(object? sender, ElapsedEventArgs e)
+        private void CarSpawnerOnElapsed(object? sender, ElapsedEventArgs e)
         {
             _carSpawner.Interval = _ran.Next(1500, 2200);
 
-            // make sure there is only one car in que
+            // make sure there is only five car in que
             if (_vehicles.Where(x => x.IsAtPump() == false).ToList().Count >= 5)
                 return;
 
@@ -307,35 +323,35 @@ public class Runner
                     vehicle.TankLevel = _ran.Next(1, 25);
                     break;
                 case Vehicle.VehicleTypes.Van:
-                    vehicle.FuelType = (Vehicle.FuelTypes) _ran.Next(0, 2);
-                    vehicle.TankLevel = _ran.Next(1,40);
+                    vehicle.FuelType = (Vehicle.FuelTypes)_ran.Next(0, 2);
+                    vehicle.TankLevel = _ran.Next(1, 40);
                     break;
                 case Vehicle.VehicleTypes.HGV:
                     vehicle.FuelType = Vehicle.FuelTypes.Diesel;
                     vehicle.TankLevel = _ran.Next(1, 75);
                     break;
             }
-            
+
             _vehicles.Add(vehicle);
             _vehicles = _vehicles.ToList();
-            
+
             CarTimout(vehicle);
             RenderForecourt();
         }
 
-        private static void CarTimout(Vehicle vehicle)
+        private void CarTimout(Vehicle vehicle)
         {
-            CustomTimer carTimeOut = new();
+            CustomTimer carTimeOut = new CustomTimer();
 
             carTimeOut.Elapsed += CarTimeOutOnElapsed;
-            carTimeOut.Interval = _ran.Next(1000,2000);
+            carTimeOut.Interval = _ran.Next(1000, 2000);
             carTimeOut.CarId = vehicle.Id;
             carTimeOut.Enabled = true;
             carTimeOut.AutoReset = false;
             carTimeOut.Start();
         }
 
-        private static void CarTimeOutOnElapsed(object? sender, ElapsedEventArgs e)
+        private void CarTimeOutOnElapsed(object? sender, ElapsedEventArgs e)
         {
             var timer = (CustomTimer)sender!;
 
@@ -355,5 +371,5 @@ public class Runner
             timer.Close();
             RenderForecourt();
         }
-     
+    }
 }

@@ -34,4 +34,9 @@ public class Vehicle
         Diesel,
         LPG
     }
+
+    public void SetPumpId(int pumpId)
+    {
+        this.PumpId = pumpId;
+    }
 }
