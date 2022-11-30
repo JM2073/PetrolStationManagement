@@ -1,4 +1,6 @@
-﻿using System.Timers;
+﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
+using System.Timers;
 
 namespace PSMMain
 {
@@ -77,64 +79,15 @@ namespace PSMMain
         /// <returns>a bool for if the program should end the loop, thus ending the program.</returns>
         private bool ManageForecourt()
         {
-            if (_queCount == 0)
-                return true;
-
-            int choice = 0;
-            while (_queCount != 0)
+            if (Console.KeyAvailable && Console.ReadKey(true).Key == ConsoleKey.Escape)
             {
-                if (Console.KeyAvailable)
-                    switch (Console.ReadKey(true).Key)
-                    {
-                        case ConsoleKey.NumPad1:
-                            choice = 1;
-                            break;
-                        case ConsoleKey.NumPad2:
-                            choice = 2;
-                            break;
-                        case ConsoleKey.NumPad3:
-                            choice = 3;
-                            break;
-                        case ConsoleKey.NumPad4:
-                            choice = 4;
-                            break;
-                        case ConsoleKey.NumPad5:
-                            choice = 5;
-                            break;
-                        case ConsoleKey.NumPad6:
-                            choice = 6;
-                            break;
-                        case ConsoleKey.NumPad7:
-                            choice = 7;
-                            break;
-                        case ConsoleKey.NumPad8:
-                            choice = 8;
-                            break;
-                        case ConsoleKey.NumPad9:
-                            choice = 9;
-                            break;
-                        case ConsoleKey.Escape:
-                            return false;
-                    }
-
-                var pump = _pumps.SingleOrDefault(x => x.Id == choice);
-                if (pump is { CurrentlyActive: false })
-                {
-                    StartPumping(choice);
-                }
-                else if (pump is { CurrentlyActive: true })
-                {
-                    Console.WriteLine("please select an available pump.");
-                }
-
-                choice = 0;
+                return false;
             }
 
-            //https://stackoverflow.com/a/6541403 
-            //cycles though cached inputs to clear them out.
-            while (Console.KeyAvailable)
+            while (_queCount > 0)
             {
-                ConsoleKeyInfo key = Console.ReadKey();
+                if (_pumps.Any(x => x.CurrentlyActive == false))
+                    StartPumping(_pumps.First(x => x.CurrentlyActive == false).Id);
             }
 
             return true;
@@ -233,7 +186,7 @@ namespace PSMMain
 
 #if DEBUG
             Console.WriteLine($"           (DEBUG) cars at pumps details:\n");
-            foreach (var vehicle in _vehicles.Where(x => x.IsAtPump()))
+            foreach (var vehicle in _vehicles.Where(x => x.PumpId != null))
             {
                 Console.WriteLine(
                     $"           (DEBUG) id:{vehicle.Id}, fuel type:{vehicle.FuelType.ToString()}, vehicle type:{vehicle.VehicleType}, starting tank level:{vehicle.TankLevel}, pump assigned to:{vehicle.PumpId}\n");
@@ -363,9 +316,9 @@ namespace PSMMain
         }
 
         /// <summary>
-        /// 
+        /// makes and starts the timer for adding fuel to a vehicle.
         /// </summary>
-        /// <param name="pumpId"></param>
+        /// <param name="pumpId">the id of the pump that the vehicle will fill at. </param>
         private void StartPumping(int pumpId)
         {
             //sets the target pump as currently being used. 
@@ -420,7 +373,7 @@ namespace PSMMain
         {
             var timer = (CustomTimer)sender!;
             var pump = _pumps.Single(x => x.Id == timer.PumpId);
-            pump.CurrentlyActive = false;
+
 
             var vehicle = _vehicles.Single(x => x.PumpId == pump.Id);
             double amountPumped = (timer.Interval / 1000) * FuelPumpedPerSecond;
@@ -445,7 +398,7 @@ namespace PSMMain
 
             _vehicles.Remove(vehicle);
             _vehicles = _vehicles.ToList();
-
+            pump.CurrentlyActive = false;
 
             _servedCars++;
             timer.Close();
