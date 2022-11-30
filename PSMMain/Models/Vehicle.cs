@@ -4,10 +4,9 @@ namespace PSMMain;
 
 public class Vehicle
 {
-    public Vehicle(int id,  double tankLevel, VehicleTypes vehicleType)
+    public Vehicle(int id, VehicleTypes vehicleType)
     {
         Id = id;
-        TankLevel = tankLevel;
         VehicleType = vehicleType;
     }
 
@@ -33,10 +32,5 @@ public class Vehicle
         Unleaded,
         Diesel,
         LPG
-    }
-
-    public void SetPumpId(int pumpId)
-    {
-        this.PumpId = pumpId;
     }
 }

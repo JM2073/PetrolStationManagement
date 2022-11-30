@@ -1,29 +1,41 @@
 ﻿using System.Timers;
-using Timer = System.Timers.Timer;
+
 namespace PSMMain
 {
     public class Runner
     {
+        private readonly User _currentUser = new("John", "Smith");
+        private CustomTimer _carSpawner = new(5000);
+        private readonly Random _ran = new();
+        private List<Pump> _pumps = new();
+        private List<Vehicle> _vehicles = new();
+
         private bool _currentlyDrawing;
         private int _servedCars;
         private int _queCount;
         private int _lostCars;
         private int _vehicleIdCount;
         private double _totalRev;
-        private User _currentUser = new("John", "Smith");
-        private Timer _carSpawner = new(5000);
-        private Random _ran = new();
-        private List<Pump> _pumps = new();
-        private List<Vehicle> _vehicles = new();
-        
+
         // as of typing these are the avrage prices of fule in the uk.
         // https://www.mylpg.eu/stations/united-kingdom/prices/
-        private double PriceOfUnleaded = 1.6;
-        private double PriceOfDiesel = 1.84;
-        private double PriceOfLPG = 0.85;
+        private double _priceOfUnleaded = 1.6;
+        private double _priceOfDiesel = 1.84;
+        private double _priceOfLpg = 0.85;
 
+        //setting the fill speed of the pumps, to help speed debugging, the pumps fill slightly faster to reduce waiting times.
+        //in a release environment the fill time will be required the 1.5
+#if DEBUG
+        private const double FuelPumpedPerSecond = 3;
+#else
+        private const double FuelPumpedPerSecond = 1.5;
+#endif
+
+
+        //entry point from the start of the application. 
         public void Run()
         {
+            //to aid debugging when in a DEBUG environment the login is skipped.
 #if DEBUG
             var onShift = true;
 #else
@@ -32,17 +44,37 @@ namespace PSMMain
 
             InitialStartup(9);
 
+            //main functionality loop 
             while (onShift)
             {
                 onShift = ManageForecourt();
             }
 
+
             _carSpawner.Close();
             Console.WriteLine("well done, thank you for all your hard work!");
-            // out of current scope, TODO calculate wages.
             Console.ReadKey();
         }
 
+        /// <summary>
+        /// generates a number of pumps based on the param numOfPumps, this will be the forecourt.
+        /// </summary>
+        /// <param name="numOfPumps">the number of pumps.</param>
+        private void InitialStartup(int numOfPumps)
+        {
+            for (var i = 1; i <= numOfPumps; i++)
+                _pumps.Add(new Pump(i, false, 0.00, 0.00, 0.00));
+
+            _pumps = _pumps.ToList();
+
+            RenderForecourt();
+            CarGenerator();
+        }
+
+        /// <summary>
+        /// waits and takes the user input, the process if that input can move a car to a pump or not.
+        /// </summary>
+        /// <returns>a bool for if the program should end the loop, thus ending the program.</returns>
         private bool ManageForecourt()
         {
             if (_queCount == 0)
@@ -108,6 +140,10 @@ namespace PSMMain
             return true;
         }
 
+        /// <summary>
+        /// the login screen where it asks the user for there username and password, hiding the password for security reasons.
+        /// </summary>
+        /// <returns>a bool for if the login was successful</returns>
         private bool SecurityScreen()
         {
             bool authenticate = false;
@@ -155,17 +191,10 @@ namespace PSMMain
             return authenticate;
         }
 
-        private void InitialStartup(int numOfPumps)
-        {
-            for (var i = 1; i <= numOfPumps; i++)
-                _pumps.Add(new Pump(i, false, 0.00, 0.00, 0.00));
 
-            _pumps = _pumps.ToList();
-
-            RenderForecourt();
-            CarGenerator();
-        }
-
+        /// <summary>
+        /// displays the information to the user.
+        /// </summary>
         private void RenderForecourt()
         {
             //wait for the screen to be drawn before drawing again. 
@@ -181,6 +210,12 @@ namespace PSMMain
             Console.WriteLine($"           Cars: {_queCount}");
 #if DEBUG
             Console.WriteLine($"           (DEBUG) TOTAL Cars: {_vehicleIdCount}");
+            Console.WriteLine($"           (DEBUG) car que details:\n");
+            foreach (var vehicle in _vehicles.Where(x => x.IsAtPump() == false))
+            {
+                Console.WriteLine(
+                    $"           (DEBUG) id:{vehicle.Id}, fuel type:{vehicle.FuelType.ToString()}, vehicle type:{vehicle.VehicleType}, starting tank level:{vehicle.TankLevel}\n");
+            }
 #endif
             Console.WriteLine();
             Console.Write($"1,{(_pumps.Single(x => x.Id == 1).CurrentlyActive ? "BUSY " : "AVAIL")} ------- ");
@@ -195,12 +230,22 @@ namespace PSMMain
             Console.Write($"8,{(_pumps.Single(x => x.Id == 8).CurrentlyActive ? "BUSY " : "AVAIL")} ------- ");
             Console.Write($"9,{(_pumps.Single(x => x.Id == 9).CurrentlyActive ? "BUSY " : "AVAIL")} ------- ");
             Console.WriteLine("\n\n");
+
+#if DEBUG
+            Console.WriteLine($"           (DEBUG) cars at pumps details:\n");
+            foreach (var vehicle in _vehicles.Where(x => x.IsAtPump()))
+            {
+                Console.WriteLine(
+                    $"           (DEBUG) id:{vehicle.Id}, fuel type:{vehicle.FuelType.ToString()}, vehicle type:{vehicle.VehicleType}, starting tank level:{vehicle.TankLevel}, pump assigned to:{vehicle.PumpId}\n");
+            }
+#endif
+
             Console.WriteLine($"Liters sold:");
-            Console.WriteLine($"    Unleaded Fuel Pumped = {_pumps.Sum(pump => pump.UnloadedFuelDescended):0.00}");
-            Console.WriteLine($"    Diesel Fuel Pumped = {_pumps.Sum(pump => pump.DieselFuelDescended):0.00}");
-            Console.WriteLine($"    LPG Fuel Pumped = {_pumps.Sum(pump => pump.LpgFuelDescended):0.00}");
-            Console.WriteLine($"total Money Made = {_totalRev}");
-            Console.WriteLine($"1% for commission = {_totalRev / 100}");
+            Console.WriteLine($"    Unleaded Fuel Pumped = {_pumps.Sum(pump => pump.UnloadedFuelDescended):F}");
+            Console.WriteLine($"    Diesel Fuel Pumped = {_pumps.Sum(pump => pump.DieselFuelDescended):F}");
+            Console.WriteLine($"    LPG Fuel Pumped = {_pumps.Sum(pump => pump.LpgFuelDescended):F}");
+            Console.WriteLine($"total Money Made = {_totalRev:F}");
+            Console.WriteLine($"1% for commission = {_totalRev / 100:F}");
             Console.WriteLine($"total served cars = {_servedCars}");
             Console.WriteLine($"total cars left early = {_lostCars}");
             Console.WriteLine("\n\n");
@@ -221,80 +266,9 @@ namespace PSMMain
             _currentlyDrawing = false;
         }
 
-
-        private void StartPumping(int pumpId)
-        {
-            //TODO: check there is a pump matching the ID
-            CustomTimer fuelTimer = new CustomTimer();
-            var vehicle = _vehicles.First(x => x.PumpId == null);
-
-            vehicle.PumpId = pumpId;
-
-            _vehicles = _vehicles.ToList();
-
-            _pumps.Single(x => x.Id == pumpId).CurrentlyActive = true;
-            
-            fuelTimer.Elapsed += FuelTimerOnElapsed;
-            fuelTimer.Interval = CalculateFuelTime(vehicle);
-            fuelTimer.PumpId = pumpId;
-            fuelTimer.Enabled = true;
-            fuelTimer.AutoReset = false;
-            fuelTimer.Start();
-            _queCount--;
-            RenderForecourt();
-        }
-
-        private double CalculateFuelTime(Vehicle vehicle)
-        {
-            double remainingTankSize = vehicle.VehicleType switch
-            {
-                Vehicle.VehicleTypes.Car => 50 - vehicle.TankLevel,
-                Vehicle.VehicleTypes.Van => 80 - vehicle.TankLevel,
-                Vehicle.VehicleTypes.HGV => 150 - vehicle.TankLevel,
-                _ => throw new ArgumentOutOfRangeException()
-            };
-
-            return (remainingTankSize * 1.5) * 1000;
-        }
-
-
-        private void FuelTimerOnElapsed(object? sender, ElapsedEventArgs e)
-        {
-            var timer = (CustomTimer)sender!;
-            var pump = _pumps.Single(x => x.Id == timer.PumpId);
-            pump.CurrentlyActive = false;
-
-            var vehicle = _vehicles.Single(x => x.PumpId == pump.Id);
-            double amountPumped = (timer.Interval / 1000) * 1.5;
-
-            switch (vehicle.FuelType)
-            {
-                case Vehicle.FuelTypes.Unleaded:
-                    pump.UnloadedFuelDescended += amountPumped;
-                    _totalRev += amountPumped * PriceOfUnleaded;
-                    break;
-                case Vehicle.FuelTypes.Diesel:
-                    pump.DieselFuelDescended += amountPumped;
-                    _totalRev += amountPumped * PriceOfDiesel;
-                    break;
-                case Vehicle.FuelTypes.LPG:
-                    pump.LpgFuelDescended += amountPumped;
-                    _totalRev += amountPumped * PriceOfLPG;
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-
-            _vehicles.Remove(vehicle);
-            _vehicles = _vehicles.ToList();
-
-
-            _servedCars++;
-            timer.Close();
-            RenderForecourt();
-        }
-
-
+        /// <summary>
+        /// starts the timer for cars to be genrated every 
+        /// </summary>
         private void CarGenerator()
         {
             _carSpawner.Elapsed += CarSpawnerOnElapsed;
@@ -303,7 +277,12 @@ namespace PSMMain
             _carSpawner.Start();
         }
 
-
+        /// <summary>
+        /// makes a new vehicle and adds it to the list of current vehicles
+        /// </summary>
+        /// <param name="sender">the timer, that is of class CustomTimer</param>
+        /// <param name="e"></param>
+        /// <exception cref="ArgumentOutOfRangeException">if the vehicle type is set outside of the enum set.</exception>
         private void CarSpawnerOnElapsed(object? sender, ElapsedEventArgs e)
         {
             _carSpawner.Interval = _ran.Next(1500, 2200);
@@ -314,8 +293,9 @@ namespace PSMMain
 
             _queCount++;
             _vehicleIdCount++;
-            // at this current time the tankSize is irrelevant. for future TODO: generate tank size and assign it to new vehicle 
-            var vehicle = new Vehicle(_vehicleIdCount, 0.00, (Vehicle.VehicleTypes)_ran.Next(0, 3));
+
+            //creates a new Vehicle, setting the fuel type and tank level baced on the Vehicle Type.
+            var vehicle = new Vehicle(_vehicleIdCount, (Vehicle.VehicleTypes)_ran.Next(0, 3));
             switch (vehicle.VehicleType)
             {
                 case Vehicle.VehicleTypes.Car:
@@ -330,27 +310,37 @@ namespace PSMMain
                     vehicle.FuelType = Vehicle.FuelTypes.Diesel;
                     vehicle.TankLevel = _ran.Next(1, 75);
                     break;
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
 
             _vehicles.Add(vehicle);
             _vehicles = _vehicles.ToList();
 
-            CarTimout(vehicle);
+            CarTimout(vehicle.Id);
             RenderForecourt();
         }
 
-        private void CarTimout(Vehicle vehicle)
+        /// <summary>
+        /// starts a timer for how long the vehicle will wait before leaving. 
+        /// </summary>
+        /// <param name="vehicleId">the vehicleId of the vehicle that the timer is for.</param>
+        private void CarTimout(int vehicleId)
         {
-            CustomTimer carTimeOut = new CustomTimer();
+            CustomTimer carTimeOut = new CustomTimer(_ran.Next(1000, 2000));
 
             carTimeOut.Elapsed += CarTimeOutOnElapsed;
-            carTimeOut.Interval = _ran.Next(1000, 2000);
-            carTimeOut.CarId = vehicle.Id;
+            carTimeOut.CarId = vehicleId;
             carTimeOut.Enabled = true;
             carTimeOut.AutoReset = false;
             carTimeOut.Start();
         }
 
+        /// <summary>
+        /// checks if the vehicle is currently at a pump and returns urly if it is. otherwise, remove it from the list of vehicles.
+        /// </summary>
+        /// <param name="sender">the timer, that is of class CustomTimer</param>
+        /// <param name="e"></param>
         private void CarTimeOutOnElapsed(object? sender, ElapsedEventArgs e)
         {
             var timer = (CustomTimer)sender!;
@@ -368,6 +358,96 @@ namespace PSMMain
 
             _queCount--;
             _lostCars++;
+            timer.Close();
+            RenderForecourt();
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="pumpId"></param>
+        private void StartPumping(int pumpId)
+        {
+            //sets the target pump as currently being used. 
+            _pumps.Single(x => x.Id == pumpId).CurrentlyActive = true;
+
+            // grabs the first vehicle and assigns it to the pump by setting vehicles pumpid to the pumps id.
+            var vehicle = _vehicles.First(x => x.PumpId == null);
+            vehicle.PumpId = pumpId;
+            _vehicles = _vehicles.ToList();
+
+            //make a new timer for the vehicle; associated by the pump id; where the interval is Calculate in the CalculateFuelTime method.
+            //the timer is for how long the vehicle will be at the pump. 
+            CustomTimer fuelTimer = new CustomTimer(CalculateFuelTime(vehicle.VehicleType, vehicle.TankLevel));
+
+
+            fuelTimer.Elapsed += FuelTimerOnElapsed;
+            fuelTimer.PumpId = pumpId;
+            fuelTimer.Enabled = true;
+            fuelTimer.AutoReset = false;
+            fuelTimer.Start();
+            _queCount--;
+            RenderForecourt();
+        }
+
+        /// <summary>
+        /// takes the vehicle type and the current fuel in the tank and works out how long it will take to fill in milliseconds. 
+        /// </summary>
+        /// <param name="vehicleType">what kind of vehicle it is; car, van, HGV</param>
+        /// <param name="tankLevel">how much fuel is currently in the vehicle tank.</param>
+        /// <returns>a double for the time it would take to fill in milliseconds.</returns>
+        /// <exception cref="ArgumentOutOfRangeException">this would trigger if vehicleType is set to something other than 0~2 </exception>
+        private double CalculateFuelTime(Vehicle.VehicleTypes vehicleType, double tankLevel)
+        {
+            double remainingTankSize = vehicleType switch
+            {
+                Vehicle.VehicleTypes.Car => 50 - tankLevel,
+                Vehicle.VehicleTypes.Van => 80 - tankLevel,
+                Vehicle.VehicleTypes.HGV => 150 - tankLevel,
+                _ => throw new ArgumentOutOfRangeException()
+            };
+
+            return (remainingTankSize / FuelPumpedPerSecond) * 1000;
+        }
+
+        /// <summary>
+        /// when a vehicle is done pumping, (when the pumping timer ends) this adds the pumped fuel and cost to the totals.
+        /// </summary>
+        /// <param name="sender">the timer, that is of class CustomTimer</param>
+        /// <param name="e"></param>
+        /// <exception cref="ArgumentOutOfRangeException">if for some reason the vehicles</exception>
+        private void FuelTimerOnElapsed(object? sender, ElapsedEventArgs e)
+        {
+            var timer = (CustomTimer)sender!;
+            var pump = _pumps.Single(x => x.Id == timer.PumpId);
+            pump.CurrentlyActive = false;
+
+            var vehicle = _vehicles.Single(x => x.PumpId == pump.Id);
+            double amountPumped = (timer.Interval / 1000) * FuelPumpedPerSecond;
+
+            switch (vehicle.FuelType)
+            {
+                case Vehicle.FuelTypes.Unleaded:
+                    pump.UnloadedFuelDescended += amountPumped;
+                    _totalRev += amountPumped * _priceOfUnleaded;
+                    break;
+                case Vehicle.FuelTypes.Diesel:
+                    pump.DieselFuelDescended += amountPumped;
+                    _totalRev += amountPumped * _priceOfDiesel;
+                    break;
+                case Vehicle.FuelTypes.LPG:
+                    pump.LpgFuelDescended += amountPumped;
+                    _totalRev += amountPumped * _priceOfLpg;
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+
+            _vehicles.Remove(vehicle);
+            _vehicles = _vehicles.ToList();
+
+
+            _servedCars++;
             timer.Close();
             RenderForecourt();
         }
