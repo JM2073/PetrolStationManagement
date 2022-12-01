@@ -50,11 +50,23 @@ namespace PSMMain
             while (onShift)
             {
                 onShift = ManageForecourt();
+
             }
 
 
             _carSpawner.Close();
-            Console.WriteLine("well done, thank you for all your hard work!");
+            _currentlyDrawing = true;
+            Console.Clear();
+            Console.WriteLine($"well done, thank you for all your hard work {_currentUser.FirstName} {_currentUser.LastName}!");
+            
+            Console.WriteLine($"Liters sold:");
+            Console.WriteLine($"    Unleaded Fuel Pumped = {_pumps.Sum(pump => pump.UnloadedFuelDescended):F}");
+            Console.WriteLine($"    Diesel Fuel Pumped = {_pumps.Sum(pump => pump.DieselFuelDescended):F}");
+            Console.WriteLine($"    LPG Fuel Pumped = {_pumps.Sum(pump => pump.LpgFuelDescended):F}");
+            Console.WriteLine($"total Money Made = {_totalRev:F}");
+            Console.WriteLine($"1% for commission = {_totalRev / 100:F}");
+            Console.WriteLine($"total served cars = {_servedCars}");
+            Console.WriteLine($"total cars left early = {_lostCars}");
             Console.ReadKey();
         }
 
@@ -203,17 +215,10 @@ namespace PSMMain
             Console.WriteLine($"total cars left early = {_lostCars}");
             Console.WriteLine("\n\n");
             Console.WriteLine("To finish your shift for the day please press the 'ESC' key");
-
-            if (_queCount != 0)
+            Console.WriteLine("The system will mange your forecourt, please remain vigilant of your forecourt at all times. ");
+            if (_queCount <= 0)
             {
-                Console.WriteLine("you have cars in the queue, please select an available pump.");
-                Console.WriteLine(
-                    "inorder to send a car to a pump please select the corresponding key on your number pad, eg: for pump 1 press the 'NUM 1' key");
-            }
-
-            if (_queCount == 0)
-            {
-                Console.WriteLine("please wait for a vehicle to join the que ");
+                Console.WriteLine("Waiting for a vehicle ...");
             }
 
             _currentlyDrawing = false;
