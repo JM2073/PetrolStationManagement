@@ -1,4 +1,4 @@
-﻿namespace PSMMain;
+﻿namespace PSMMain.Models;
 
 public class User
 {

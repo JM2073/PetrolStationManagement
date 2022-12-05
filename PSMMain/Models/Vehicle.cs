@@ -1,16 +1,12 @@
-using System.Runtime.CompilerServices;
-
-namespace PSMMain;
+namespace PSMMain.Models;
 
 public class Vehicle
 {
-    public Vehicle(int id, VehicleTypes vehicleType)
+    public Vehicle(VehicleTypes vehicleType)
     {
-        Id = id;
         VehicleType = vehicleType;
     }
 
-    public int Id { get; set; }
     public double TankLevel { get; set; }
     public int? PumpId { get; set; }
     public VehicleTypes VehicleType { get; set; }
