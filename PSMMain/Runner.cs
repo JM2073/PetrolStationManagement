@@ -8,7 +8,7 @@ namespace PSMMain
 {
     public class Runner
     {
-        private readonly User _currentUser = new("John", "Smith");
+        private readonly User _currentUser = new("John", "Smith",DateTime.Now);
         private CustomTimer _carSpawner = new(5000);
         private readonly Random _ran = new();
         private List<Pump> _pumps = new();
@@ -40,11 +40,9 @@ namespace PSMMain
         public void Run()
         {
             //to aid debugging when in a DEBUG environment the login is skipped.
-#if DEBUG
-            var onShift = true;
-#else
+
             var onShift = SecurityScreen();
-#endif
+
 
             InitialStartup(9);
 
@@ -65,8 +63,9 @@ namespace PSMMain
             Console.WriteLine($"    Unleaded Fuel Pumped = {_pumps.Sum(pump => pump.UnloadedFuelDescended):F}");
             Console.WriteLine($"    Diesel Fuel Pumped = {_pumps.Sum(pump => pump.DieselFuelDescended):F}");
             Console.WriteLine($"    LPG Fuel Pumped = {_pumps.Sum(pump => pump.LpgFuelDescended):F}");
-            Console.WriteLine($"total Money Made = {_totalRev:F}");
-            Console.WriteLine($"1% for commission = {_totalRev / 100:F}");
+            Console.WriteLine($"total Money Made = {_totalRev:C}");
+            Console.WriteLine($"1% for commission = {_totalRev / 100:C}");
+            Console.WriteLine($"total earning of attended = {_currentUser.CalcWage(DateTime.Now) + _totalRev / 100:C}");
             Console.WriteLine($"total served cars = {_servedCars}");
             Console.WriteLine($"total cars left early = {_lostCars}");
             Console.ReadKey();

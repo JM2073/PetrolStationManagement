@@ -11,7 +11,6 @@ public class Pump
         DieselFuelDescended = dieselFuelDescended;
         LpgFuelDescended = lpgFuelDescended;
     }
-
     public int Id { get; set; }
     public bool CurrentlyActive { get; set; }
     public double UnloadedFuelDescended { get; set; }
